@@ -1,0 +1,66 @@
+version: '3'
+
+services:
+
+  config-server:
+    build: config-server-repo/
+    restart: always
+    container_name: config-server
+
+  mysql:
+    image: mysql
+    container_name: mysql-server
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+
+  mongo:
+    image: mongo:latest
+    container_name: mongo
+    volumes:
+      - $HOME/data/db:/data/db
+
+  movie-service:
+    build: MovieService/
+    restart: always
+    container_name: movie-service
+    depends_on:
+      - mongo
+      - eureka-server
+      - config-server
+    links:
+      - mongo
+      - eureka-server
+      - config-server
+
+  user-service:
+    build: userservice/
+    container_name: user-service
+    depends_on:
+      - mysql
+      - eureka-server
+      - config-server
+    links:
+      - mysql
+      - eureka-server
+      - config-server
+
+  api-gateway:
+    build: ApiGateway/
+    restart: always
+    depends_on:
+      - user-service
+      - movie-service
+    links:
+      - user-service
+      - movie-service
+    container_name: api-gateway
+    ports:
+      - 8080:8080
+
+  eureka-server:
+    build: eurekadiscoverymicroservice/
+    restart: always
+    container_name: eureka-server
+    ports:
+      - 9090:9090
+
